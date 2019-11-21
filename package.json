@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "electron-serve": "^0.4.0",
-    "electron-store": "^5.1.0"
+    "electron-store": "^5.1.0",
+    "timing-object": "^2.1.14"
   },
   "devDependencies": {
     "electron": "^7.1.1",

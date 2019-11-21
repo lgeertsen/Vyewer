@@ -3,14 +3,52 @@ import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
+import Movie from '../components/Movie';
+
+import {mediaSync} from '../static/mediaSync';
+// var timingsrc = require("../static/timingsrc-v2");
+// var timingobject = require('timing-object');
+
+
 const ipcRenderer = electron.ipcRenderer || false;
+
+function Timer(callback, interval) {
+  var self = this
+  this.callback = callback;
+  this.interval = interval;
+  this.timeout = undefined;
+  this.lastCall = 0;
+
+  this.start = function() {
+    this.lastCall = Date.now();
+    this.timeout = setInterval(step, this.interval, callback);
+  }
+
+  this.stop = function() {
+    clearInterval(this.timeout);
+  }
+
+  function step(callback) {
+    let now = Date.now();
+    let deltaTime = now - self.lastCall;
+    self.lastCall = now;
+    callback(deltaTime)
+  }
+}
 
 export default class Home extends React.Component {
   constructor(props) {
     super(props);
+
+    // this.to = new timingsrc.TimingObject();
+    var self = this
+    this.timer = new Timer((deltaTime) => self.setTime(deltaTime), 1000);
+    this.time = 0;
+
     this.state = {
       active: false,
       dragType: undefined,
+      dragLayer: -1,
       originalX: 0,
       originalY: 0,
       mouseX: 0,
@@ -23,24 +61,49 @@ export default class Home extends React.Component {
           x: 0,
           y: 0,
           width: 800,
-          height: 600
+          height: 600,
+          clip: "cuntphal",
+          reference: React.createRef(),
+          sync: undefined
+        },
+        {
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 600,
+          clip: "24K",
+          reference: React.createRef(),
+          sync: undefined
         }
       ]
     }
   }
 
   componentDidMount() {
-
+    let layers = this.state.layers;
+    for(let i = 0; i < layers.length; i++) {
+      layers[i].sync = mediaSync(layers[i].reference, {pos: 0.1});
+    }
   }
 
-  dragStart(e, layerNb) {
+  setTime(deltaTime) {
+    this.time += deltaTime
+    let layers = this.state.layers;
+    for(let i = 0; i < layers.length; i++) {
+      layers[i].reference.current.currentTime = this.time/1000
+    }
+  }
+
+  dragStart(e) {
     e.preventDefault()
     if (e.button == 0 && e.target.getAttribute("draggable") == "true") {
       console.log("----- START DRAG -----");
       let dragType = e.target.getAttribute("dragtype");
 
+      let layerNb = e.target.getAttribute("layernb");
+
       let layers = this.state.layers;
-      let layer = layers[0];
+      let layer = layers[layerNb];
 
       let originalWidth = layer.width;
       let originalHeight = layer.height;
@@ -52,6 +115,7 @@ export default class Home extends React.Component {
       this.setState({
         active: true,
         dragType: dragType,
+        dragLayer: layerNb,
         originalWidth: originalWidth,
         originalHeight: originalHeight,
         originalX: originalX,
@@ -119,14 +183,13 @@ export default class Home extends React.Component {
       top = 600 - 20;
     }
 
-    let layer = {
-      x: left,
-      y: top,
-      width: width,
-      height: height
-    }
     let layers = this.state.layers
-    layers[0] = layer
+    let dragLayer = this.state.dragLayer
+    layers[dragLayer].x = left
+    layers[dragLayer].y = top
+    layers[dragLayer].width = width
+    layers[dragLayer].height = height
+
 
     this.setState({layers: layers})
   }
@@ -159,9 +222,10 @@ export default class Home extends React.Component {
     }
 
     let layers = this.state.layers
-    layers[0].y = top
-    layers[0].width = width
-    layers[0].height = height
+    let dragLayer = this.state.dragLayer
+    layers[dragLayer].y = top
+    layers[dragLayer].width = width
+    layers[dragLayer].height = height
 
     this.setState({layers: layers})
   }
@@ -194,9 +258,10 @@ export default class Home extends React.Component {
     }
 
     let layers = this.state.layers
-    layers[0].x = left
-    layers[0].width = width
-    layers[0].height = height
+    let dragLayer = this.state.dragLayer
+    layers[dragLayer].x = left
+    layers[dragLayer].width = width
+    layers[dragLayer].height = height
 
     this.setState({layers: layers})
   }
@@ -224,8 +289,9 @@ export default class Home extends React.Component {
     }
 
     let layers = this.state.layers
-    layers[0].width = width
-    layers[0].height = height
+    let dragLayer = this.state.dragLayer
+    layers[dragLayer].width = width
+    layers[dragLayer].height = height
 
     this.setState({layers: layers})
   }
@@ -250,22 +316,26 @@ export default class Home extends React.Component {
             >
               <div className="viewer">
                 <div className="videosContainer">
-                  <div className="videoContainer" ref={this.videoContainer} layernb={0}>
-                    <div className="video">
-                      <video>
-                        <source src="./static/24K.mp4" type="video/mp4"/>
-                      </video>
-                    </div>
-                    <div className="resizer top-left" draggable="true" dragtype="top-left"></div>
-                    <div className="resizer top-right" draggable="true" dragtype="top-right"></div>
-                    <div className="resizer bottom-left" draggable="true" dragtype="bottom-left"></div>
-                    <div className="resizer bottom-right" draggable="true" dragtype="bottom-right"></div>
-                  </div>
+                  {this.state.layers.map((layer, index) => (
+                    <Movie
+                      key={index}
+                      reference={layer.reference}
+                      layerNb={index}
+                      x={layer.x}
+                      y={layer.y}
+                      width={layer.width}
+                      height={layer.height}
+                      clip={layer.clip}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
             <div className="timelineContainer"></div>
-            <div className="commandsContainer"></div>
+            <div className="commandsContainer">
+              <button onClick={() => this.timer.start()}>Play</button>
+              <button onClick={() => this.timer.stop()}>Pause</button>
+            </div>
           </div>
           <div className="layersContainer">
             <h1>Video layers</h1>
@@ -324,54 +394,6 @@ export default class Home extends React.Component {
             position: absolute;
             flex: 1;
             background: #fff;
-          }
-          .videoContainer {
-            position: absolute;
-            left: ${this.state.layers[0].x}px;
-            top: ${this.state.layers[0].y}px;
-            display: flex;
-            width: ${this.state.layers[0].width}px;
-            height: ${this.state.layers[0].height}px;
-          }
-          .video {
-            position: relative;
-            flex: 1;
-            // width: 100%;
-            overflow: hidden;
-          }
-          .video video {
-            position: absolute;
-            left: -${this.state.layers[0].x}px;
-            top: -${this.state.layers[0].y}px;
-            width: 800px;
-          }
-          .videoContainer .resizer {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #fff;
-            border: 2px solid #c0392b;
-          }
-          .resizer.top-left {
-            left: -4px;
-            top: -4px;
-            cursor: nwse-resize;
-          }
-          .resizer.top-right {
-            right: -4px;
-            top: -4px;
-            cursor: nesw-resize;
-          }
-          .resizer.bottom-left {
-            left: -4px;
-            bottom: -4px;
-            cursor: nesw-resize;
-          }
-          .resizer.bottom-right {
-            right: -4px;
-            bottom: -4px;
-            cursor: nwse-resize;
           }
 
           .timelineContainer {

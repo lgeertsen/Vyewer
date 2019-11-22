@@ -11,9 +11,12 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "array-move": "^2.2.0",
     "electron-serve": "^0.4.0",
     "electron-store": "^5.1.0",
-    "timing-object": "^2.1.14"
+    "rc-slider": "^8.7.1",
+    "rc-tooltip": "^4.0.0-alpha.3",
+    "react-sortable-hoc": "^1.10.1"
   },
   "devDependencies": {
     "electron": "^7.1.1",

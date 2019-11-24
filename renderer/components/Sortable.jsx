@@ -8,6 +8,7 @@ const DragHandle = sortableHandle(() =>
     <i className="fas fa-grip-lines"></i>
     <style jsx>{`
       .dragHandle {
+        color: #fff;
         margin-left: 10px;
         width: 30px;
         height: 30px;
@@ -57,7 +58,7 @@ const SortableLayer = SortableElement(({layer, setOpacity, setVolume}) => {
           flex-direction: row;
           align-items: center;
           height: auto;
-          background: #fff;
+          background: #2d2d2d;
           border-bottom: 1px solid #444;
         }
         .layerInner {
@@ -69,7 +70,7 @@ const SortableLayer = SortableElement(({layer, setOpacity, setVolume}) => {
           height: auto;
         }
         .layerTitle h3 {
-          color: #444;
+          color: #fff;
         }
         .layerMain {
           display: flex;
@@ -95,10 +96,10 @@ const SortableLayer = SortableElement(({layer, setOpacity, setVolume}) => {
           margin-bottom: 5px;
         }
         .optionTitle h4 {
-          color: #444;
+          color: #fff;
         }
         .optionTitle input {
-          width: 30px;
+          width: 45px;
         }
         `}</style>
       </div>

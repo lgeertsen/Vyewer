@@ -42,6 +42,7 @@ const Movie = ({ resizeable, reference, layerNb, x, y, width, height, clip, opac
           }
           .video {
             position: relative;
+            // z-index: ${layerNb*10};
             flex: 1;
             width: ${width}px;
             height: ${height}px;

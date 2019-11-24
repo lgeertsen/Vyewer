@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import Movie from '../components/Movie';
 import Sortable from '../components/Sortable';
+import Timeline from '../components/Timeline';
 
 const ipcRenderer = electron.ipcRenderer || false;
 
@@ -16,6 +17,8 @@ export default class Home extends React.Component {
 
     this.state = {
       playing: false,
+      position: 0.0,
+      frame: 0,
 
       drawing: false,
       strokeWidth: 2,
@@ -84,6 +87,7 @@ export default class Home extends React.Component {
     this.MCorp = window.MCorp
     this.TIMINGSRC = window.TIMINGSRC
     this.to = new this.TIMINGSRC.TimingObject({provider:undefined, range:[0,100]});
+    this.setState({frame: new this.TIMINGSRC.ScaleConverter(this.to, 1/24)});
     let layers = this.state.layers;
     for(let i = 0; i < layers.length; i++) {
       layers[i].sync = MCorp.mediaSync(layers[i].reference.current, this.to);
@@ -102,31 +106,43 @@ export default class Home extends React.Component {
       this.to.update({velocity: 1.0});
     }
     this.setState({playing: true})
+
+    this.playTimeout = setInterval((self) => {
+      self.setState({frame: Math.round(self.to.pos*24)});
+    }, 0, this);
   }
 
   pause(e) {
     this.to.update({velocity: 0.0});
+    clearInterval(this.playTimeout);
     this.setState({playing: false})
   }
 
   nextFrame(e) {
     this.to.update({position: this.to.query().position + 1/24});
+    this.setState({frame: Math.round(this.to.pos*24)})
   }
 
   previousFrame(e) {
     this.to.update({position: this.to.query().position - 1/24});
+    this.setState({frame: Math.round(this.to.pos*24)})
   }
 
   firstFrame(e) {
     this.to.update({position: 0, velocity: 0.0});
-    this.setState({playing: false})
-
+    clearInterval(this.playTimeout);
+    this.setState({playing: false, frame: 0})
   }
 
   lastFrame(e) {
     this.to.update({position: 100, velocity: 0.0});
-    this.setState({playing: false})
+    clearInterval(this.playTimeout);
+    this.setState({playing: false, frame: 100*24})
+  }
 
+  setFrame(frame) {
+    this.to.update({position: frame/24});
+    this.setState({frame: frame})
   }
 
   dragStart(e) {
@@ -223,14 +239,9 @@ export default class Home extends React.Component {
   }
 
   draw(e) {
-    console.log(this.canvas.current.getBoundingClientRect());
     let radius = 3;
     let start = 0;
     let end = Math.PI * 2;
-    console.log(e);
-    console.log(e.pageX);
-    console.log(e.clientX);
-    console.log(e.screenX);
     let canvas = this.canvas;
     let bbox = canvas.current.getBoundingClientRect();
     let x = e.pageX - bbox.left;
@@ -543,9 +554,12 @@ export default class Home extends React.Component {
           width: oldLayers[i].width,
           height: oldLayers[i].height,
           clip: layers[i].clip,
+          opacity: layers[i].opacity,
+          volume: layers[i].volume,
           reference: layers[i].reference,
           layerReference: layers[i].layerReference,
-          sync: layers[i].sync
+          sync: layers[i].sync,
+          layerSync: layers[i].layerSync
         }
         newLayers.push(layer);
       } else {
@@ -616,21 +630,31 @@ export default class Home extends React.Component {
                 </div>
               </div>
             </div>
-            <div className="timelineContainer"></div>
-            <div className="commandsContainer">
-              <button onClick={(e) => this.firstFrame()}><i className="fas fa-fast-backward"></i></button>
-              <button onClick={(e) => this.previousFrame()}><i className="fas fa-step-backward"></i></button>
-              {this.state.playing ?
-                <button onClick={(e) => this.pause()}><i className="fas fa-pause"></i></button>
-                :
-                <button onClick={(e) => this.play()}><i className="fas fa-play"></i></button>
+            <div className="timelineContainer">
+              {this.to ?
+                <Timeline
+                  frame={this.state.frame}
+                  setFrame={(frame) => this.setFrame(frame)}
+                />
+                : ""
               }
-              <button onClick={(e) => this.nextFrame()}><i className="fas fa-step-forward"></i></button>
-              <button onClick={(e) => this.lastFrame()}><i className="fas fa-fast-forward"></i></button>
+            </div>
+            <div className="commandsContainer">
+              <div className="commandBtn" onClick={(e) => this.firstFrame()}><i className="fas fa-fast-backward"></i></div>
+              <div className="commandBtn" onClick={(e) => this.previousFrame()}><i className="fas fa-step-backward"></i></div>
+              {this.state.playing ?
+                <div className="commandBtn" onClick={(e) => this.pause()}><i className="fas fa-pause"></i></div>
+                :
+                <div className="commandBtn" onClick={(e) => this.play()}><i className="fas fa-play"></i></div>
+              }
+              <div className="commandBtn" onClick={(e) => this.nextFrame()}><i className="fas fa-step-forward"></i></div>
+              <div className="commandBtn" onClick={(e) => this.lastFrame()}><i className="fas fa-fast-forward"></i></div>
             </div>
           </div>
           <div className="layersContainer">
-            <h1>Video layers</h1>
+            <div className="layersTitle">
+              <h1>Video layers</h1>
+            </div>
             <Sortable
               items={this.state.layers}
               updateList={(layers) => this.rearrangeLayers(layers)}
@@ -712,7 +736,7 @@ export default class Home extends React.Component {
           .main {
             display: flex;
             flex-direction: row;
-            background: #2c3e50;
+            background: #3d3d3d;
           }
           .mainContainer {
             flex: 1;
@@ -741,27 +765,45 @@ export default class Home extends React.Component {
           .drawContainer .drawCanvas {
             position: relative;
             z-index: 2;
+            // z-index: ${(this.state.layers.length + 1) * 10};
             width: 100%;
             height: 100%;
           }
-          .drawCanvas.hover {
-            background: #fff;
-          }
 
           .timelineContainer {
-            height: 100px;
-            background: #34495e;
+            height: 50px;
+            background: #4b4b4b;
           }
           .commandsContainer {
-            height: 100px;
-            background: #7f8c8d;
+            height: 50px;
+            background: #2d2d2d;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+          }
+          .commandBtn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #4b4b4b;
+            color: #fff;
+            border-radius: 3px;
+            margin: 2px;
           }
 
 
 
           .layersContainer {
             width: 400px;
-            background: #95a5a6;
+            background: #242424;
+          }
+          .layersTitle {
+            height: auto;
+            margin: 5px 0;
+            margin-left: 10px;
           }
 
 

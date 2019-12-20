@@ -96,6 +96,10 @@ export default class Home extends React.Component {
 
     let canvas = this.canvas.current;
     this.ctx = canvas.getContext("2d");
+
+    this.to.on("timeupdate", function () {
+      this.setState({frame: Math.round(to.pos*24)});
+    });
   }
 
   play(e) {
@@ -114,35 +118,35 @@ export default class Home extends React.Component {
 
   pause(e) {
     this.to.update({velocity: 0.0});
-    clearInterval(this.playTimeout);
+    // clearInterval(this.playTimeout);
     this.setState({playing: false})
   }
 
   nextFrame(e) {
     this.to.update({position: this.to.query().position + 1/24});
-    this.setState({frame: Math.round(this.to.pos*24)})
+    // this.setState({frame: Math.round(this.to.pos*24)})
   }
 
   previousFrame(e) {
     this.to.update({position: this.to.query().position - 1/24});
-    this.setState({frame: Math.round(this.to.pos*24)})
+    // this.setState({frame: Math.round(this.to.pos*24)})
   }
 
   firstFrame(e) {
     this.to.update({position: 0, velocity: 0.0});
     clearInterval(this.playTimeout);
-    this.setState({playing: false, frame: 0})
+    this.setState({playing: false})
   }
 
   lastFrame(e) {
     this.to.update({position: 100, velocity: 0.0});
-    clearInterval(this.playTimeout);
-    this.setState({playing: false, frame: 100*24})
+    // clearInterval(this.playTimeout);
+    this.setState({playing: false})
   }
 
   setFrame(frame) {
     this.to.update({position: frame/24});
-    this.setState({frame: frame})
+    // this.setState({frame: frame})
   }
 
   dragStart(e) {

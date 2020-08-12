@@ -1,7 +1,11 @@
-import electron from 'electron';
+import electron, { desktopCapturer, remote } from 'electron';
+
 import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+
+import fs from 'fs';
+import Jimp from 'jimp';
 
 import Movie from '../components/Movie';
 import Sortable from '../components/Sortable';
@@ -14,6 +18,8 @@ export default class Home extends React.Component {
     super(props);
 
     this.canvas = React.createRef()
+
+    this.videosContainer = React.createRef()
 
     this.state = {
       playing: false,
@@ -588,11 +594,82 @@ export default class Home extends React.Component {
     this.setState({layers: layers});
   }
 
+  exportFrame() {
+    const drawing = this.state.drawing
+    this.setState({drawing: true})
+
+    let self = this
+    const bounds = remote.getCurrentWindow().webContents.getOwnerBrowserWindow().getBounds()
+    const options = {
+      types: ['window'],
+      thumbnailSize: {
+        width: bounds.width,
+        height: bounds.height
+      }
+    }
+    desktopCapturer.getSources(options).then(async sources => {
+      console.log(sources);
+
+
+      sources.forEach((source) => {
+        if (source.name === "Vyewer") {
+          const rect = self.videosContainer.current.getBoundingClientRect();
+
+          fs.writeFile('screenshotFS.png', source.thumbnail.toPNG(), (err) => {
+            if (err) throw err;
+          })
+
+          Jimp.read(source.thumbnail.toPNG(), (err, img) => {
+            if(err) throw err;
+            console.log(rect);
+            console.log(img);
+            img
+              .crop(rect.left+5, rect.top+25, rect.width, rect.height)
+              .write('screenshot.png');
+          })
+
+          this.setState({drawing: drawing})
+        }
+      });
+
+
+      // for (const source of sources) {
+      //   // Filter: main screen
+      //   if (source.name === document.title) {
+      //     try{
+      //       const stream = await navigator.mediaDevices.getUserMedia({
+      //         audio: false,
+      //         video: {
+      //           mandatory: {
+      //             chromeMediaSource: 'desktop',
+      //             chromeMediaSourceId: source.id,
+      //             minWidth: 1280,
+      //             maxWidth: 4000,
+      //             minHeight: 720,
+      //             maxHeight: 4000
+      //           }
+      //         }
+      //       });
+      //
+      //       self.handleStream(stream);
+      //     } catch (e) {
+      //       // _this.handleError(e);
+      //       console.error(e)
+      //     }
+      //   }
+      // }
+    })
+  }
+
+  handleStream(stream) {
+
+  }
+
   render() {
     return (
       <React.Fragment>
         <Head>
-          <title>Pulsar</title>
+          <title>Vyewer</title>
           <link href="https://fonts.googleapis.com/css?family=Oswald&display=swap" rel="stylesheet"/>
           <link href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300&display=swap" rel="stylesheet"/>
           <link href="./static/fontawesome/css/all.css" rel="stylesheet"/>
@@ -612,7 +689,7 @@ export default class Home extends React.Component {
               onMouseUp={(e) => this.dragEnd(e)}
             >
               <div className="viewer">
-                <div className="videosContainer">
+                <div ref={this.videosContainer} className="videosContainer">
                   {this.state.layers.map((layer, index) => (
                     <Movie
                       key={layer.id}
@@ -674,6 +751,9 @@ export default class Home extends React.Component {
           </div>
           <div className={this.state.drawing ? "colorBullet drawing selected" : "colorBullet drawing"} onClick={() => this.setState({drawing: true})}>
             <i className="fas fa-palette"></i>
+          </div>
+          <div className="colorBullet capture" onClick={() => this.exportFrame()}>
+            <i className="fas fa-camera-retro"></i>
           </div>
           {this.state.drawing ?
             <div className="drawSettingsInner">

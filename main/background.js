@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, dialog, ipcMain } from 'electron';
 import serve from 'electron-serve';
 import { createWindow } from './helpers';
 
@@ -15,7 +15,10 @@ if (isProd) {
 
   const mainWindow = createWindow('main', {
     width: 1000,
-    height: 600
+    height: 600,
+    webPreferences: {
+      webSecurity: false
+    }
   });
 
   mainWindow.maximize();
@@ -27,6 +30,22 @@ if (isProd) {
     await mainWindow.loadURL(`http://localhost:8888/home`);
     mainWindow.webContents.openDevTools();
   }
+
+  ipcMain.on('addLayer', (event, arg) => {
+    dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: 'Video', extensions: ['mp4'] }]
+    }).then(result => {
+      if(result.canceled) {
+        return;
+      }
+      if(result.filePaths.length > 0) {
+        event.sender.send('addLayer', result.filePaths[0]);
+      }
+    }).catch(err => {
+      console.log(err)
+    });
+  });
 })();
 
 app.on('window-all-closed', () => {

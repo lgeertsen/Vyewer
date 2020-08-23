@@ -3,6 +3,7 @@ import electron, { desktopCapturer, remote } from 'electron';
 import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { nanoid } from 'nanoid'
 
 import fs from 'fs';
 import Jimp from 'jimp';
@@ -24,7 +25,7 @@ export default class Home extends React.Component {
     this.state = {
       playing: false,
       position: 0.0,
-      frame: 0,
+      frame: 24,
 
       drawing: false,
       strokeWidth: 2,
@@ -43,48 +44,54 @@ export default class Home extends React.Component {
       minSize: 30,
 
       layers: [
-        {
-          id: "afzdqsf",
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 450,
-          clip: "24K.mp4",
-          opacity: 1,
-          volume: 1,
-          reference: React.createRef(),
-          layerReference: React.createRef(),
-          sync: undefined,
-          layerSync: undefined
-        },
-        {
-          id: "fghsghgdfsg",
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 450,
-          clip: "test.mov",
-          opacity: 1,
-          volume: 1,
-          reference: React.createRef(),
-          layerReference: React.createRef(),
-          sync: undefined,
-          layerSync: undefined
-        },
-        {
-          id: "kfujkghkgik",
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 450,
-          clip: "lightgrid.mp4",
-          opacity: 1,
-          volume: 1,
-          reference: React.createRef(),
-          layerReference: React.createRef(),
-          sync: undefined,
-          layerSync: undefined
-        }
+        // {
+        //   id: "afzdqsf",
+        //   x: 0,
+        //   y: 0,
+        //   width: 800,
+        //   height: 450,
+        //   clip: "24K.mp4",
+        //   opacity: 1,
+        //   volume: 1,
+        //   reference: React.createRef(),
+        //   layerReference: React.createRef(),
+        //   sync: undefined,
+        //   layerSync: undefined,
+        //   viewer: 1,
+        //   locked: false
+        // },
+        // {
+        //   id: "fghsghgdfsg",
+        //   x: 0,
+        //   y: 0,
+        //   width: 800,
+        //   height: 450,
+        //   clip: "test.mov",
+        //   opacity: 1,
+        //   volume: 1,
+        //   reference: React.createRef(),
+        //   layerReference: React.createRef(),
+        //   sync: undefined,
+        //   layerSync: undefined,
+        //   viewer: 1,
+        //   locked: false
+        // },
+        // {
+        //   id: "kfujkghkgik",
+        //   x: 0,
+        //   y: 0,
+        //   width: 800,
+        //   height: 450,
+        //   clip: "lightgrid.mp4",
+        //   opacity: 1,
+        //   volume: 1,
+        //   reference: React.createRef(),
+        //   layerReference: React.createRef(),
+        //   sync: undefined,
+        //   layerSync: undefined,
+        //   viewer: 2,
+        //   locked: false
+        // }
       ]
     }
   }
@@ -93,19 +100,67 @@ export default class Home extends React.Component {
     this.MCorp = window.MCorp
     this.TIMINGSRC = window.TIMINGSRC
     this.to = new this.TIMINGSRC.TimingObject({provider:undefined, range:[0,100]});
-    this.setState({frame: new this.TIMINGSRC.ScaleConverter(this.to, 1/24)});
+    this.setState({scaleConvertser: new this.TIMINGSRC.ScaleConverter(this.to, 1/24)});
     let layers = this.state.layers;
     for(let i = 0; i < layers.length; i++) {
       layers[i].sync = MCorp.mediaSync(layers[i].reference.current, this.to);
       layers[i].layerSync = MCorp.mediaSync(layers[i].layerReference.current, this.to);
     }
 
+    this.setState({layers: layers});
+
     let canvas = this.canvas.current;
     this.ctx = canvas.getContext("2d");
 
+    var self = this;
     this.to.on("timeupdate", function () {
-      this.setState({frame: Math.round(to.pos*24)});
+      self.setState({frame: Math.round(self.to.pos*24)});
     });
+
+
+    ipcRenderer.on('addLayer', (event, data) => {
+      console.log(data);
+      const layers = this.state.layers;
+
+      layers.push({
+        id: nanoid(),
+        x: 0,
+        y: 0,
+        width: 800,
+        height: 450,
+        clip: data,
+        opacity: 1,
+        volume: 1,
+        reference: React.createRef(),
+        layerReference: React.createRef(),
+        sync: undefined,
+        layerSync: undefined,
+        viewer: 2,
+        locked: false
+      });
+
+      this.setState({layers: layers});
+
+      this.addSyncToLayers();
+    })
+  }
+
+  addSyncToLayers() {
+    try {
+      let layers = this.state.layers;
+      for(let i = 0; i < layers.length; i++) {
+        layers[i].sync = MCorp.mediaSync(layers[i].reference.current, this.to);
+        layers[i].layerSync = MCorp.mediaSync(layers[i].layerReference.current, this.to);
+      }
+
+      this.setState({layers: layers});
+    } catch (e) {
+      addSyncToLayers()
+    }
+  }
+
+  addLayer() {
+    ipcRenderer.send('addLayer');
   }
 
   play(e) {
@@ -119,12 +174,12 @@ export default class Home extends React.Component {
 
     this.playTimeout = setInterval((self) => {
       self.setState({frame: Math.round(self.to.pos*24)});
-    }, 0, this);
+    }, 100, this);
   }
 
   pause(e) {
     this.to.update({velocity: 0.0});
-    // clearInterval(this.playTimeout);
+    clearInterval(this.playTimeout);
     this.setState({playing: false})
   }
 
@@ -135,7 +190,7 @@ export default class Home extends React.Component {
 
   previousFrame(e) {
     this.to.update({position: this.to.query().position - 1/24});
-    // this.setState({frame: Math.round(this.to.pos*24)})
+    this.setState({frame: Math.round(this.to.pos*24)})
   }
 
   firstFrame(e) {
@@ -672,7 +727,8 @@ export default class Home extends React.Component {
           <title>Vyewer</title>
           <link href="https://fonts.googleapis.com/css?family=Oswald&display=swap" rel="stylesheet"/>
           <link href="https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300&display=swap" rel="stylesheet"/>
-          <link href="./static/fontawesome/css/all.css" rel="stylesheet"/>
+          // <link href="./static/fontawesome/css/all.css" rel="stylesheet"/>
+          <link rel="stylesheet" href="https://maxst.icons8.com/vue-static/landings/line-awesome/font-awesome-line-awesome/css/all.min.css"/>
           <link href="./static/slider.css" rel="stylesheet"/>
         </Head>
 
@@ -734,7 +790,10 @@ export default class Home extends React.Component {
           </div>
           <div className="layersContainer">
             <div className="layersTitle">
-              <h1>Video layers</h1>
+              <div className="layersTitleH1">
+                <h1>Video layers</h1>
+              </div>
+              <div className="importVideo" onClick={() => this.addLayer()}>Import</div>
             </div>
             <Sortable
               items={this.state.layers}
@@ -803,7 +862,7 @@ export default class Home extends React.Component {
           * {
             margin: 0;
           }
-          p, h1, h2, h3, h4, h5, h6 {
+          p, h1, h2, h3, h4, h5, h6, div {
             color: #ecf0f1;
             font-family: "Open Sans Condensed", "Oswald", sans-serif;
           }
@@ -823,7 +882,8 @@ export default class Home extends React.Component {
             background: #3d3d3d;
           }
           .mainContainer {
-            flex: 1;
+            // flex: 1;
+            width: calc(100% - 400px);
             display: flex;
             flex-direction: column;
           }
@@ -886,8 +946,31 @@ export default class Home extends React.Component {
           }
           .layersTitle {
             height: auto;
-            margin: 5px 0;
-            margin-left: 10px;
+            margin: 5px 10px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+          }
+          .layersTitleH1 {
+            width: auto;
+            flex: 1;
+          }
+          .layersTitleH1 h1 {
+            width: auto;
+          }
+          .importVideo {
+            width: auto;
+            background: #eee;
+            color: #444;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-right: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+          }
+          .importVideo:hover {
+            background: #bbb;
           }
 
 
@@ -919,6 +1002,7 @@ export default class Home extends React.Component {
             margin-top: 5px;
             border-radius: 50%;
             border: 3px solid #fff;
+            color: #444;
             display: flex;
             align-items: center;
             justify-content: center;

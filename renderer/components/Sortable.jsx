@@ -24,11 +24,12 @@ const SortableLayer = SortableElement(({layer, setOpacity, setVolume}) => {
       <DragHandle />
       <div className="layerInner">
         <div className="layerTitle">
+          <i className="fas fa-lock"></i>
           <h3>{layer.clip}</h3>
         </div>
         <div className="layerMain">
           <video ref={layer.layerReference} muted>
-            <source src={`./static/${layer.clip}`} type="video/mp4"/>
+            <source src={`${layer.clip}`} type="video/mp4"/>
           </video>
           <div className="layerOptions">
             <div className="layerOption">
@@ -67,7 +68,18 @@ const SortableLayer = SortableElement(({layer, setOpacity, setVolume}) => {
           flex-direction: column;
         }
         .layerTitle {
+          padding-top: 10px;
           height: auto;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+        }
+        .layerTitle i {
+          color: #777;
+          background: #eee;
+          padding: 5px;
+          border-radius: 50%;
+          margin-right: 15px;
         }
         .layerTitle h3 {
           color: #fff;

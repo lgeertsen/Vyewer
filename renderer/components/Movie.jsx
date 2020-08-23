@@ -10,7 +10,7 @@ const Movie = ({ resizeable, reference, layerNb, x, y, width, height, clip, opac
       <div className={layerNb == 0 ? "videoContainer main" : "videoContainer"} layernb={layerNb}>
         <div className="video">
           <video ref={reference}>
-            <source src={`./static/${clip}`} type="video/mp4"/>
+            <source src={`${clip}`} type="video/mp4"/>
           </video>
         </div>
 

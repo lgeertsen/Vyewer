@@ -26,6 +26,7 @@ export default class Home extends React.Component {
       playing: false,
       position: 0.0,
       frame: 24,
+      maxFrames: 1,
 
       drawing: false,
       strokeWidth: 2,
@@ -122,13 +123,19 @@ export default class Home extends React.Component {
       console.log(data);
       const layers = this.state.layers;
 
+      let maxFrames = this.state.maxFrames;
+      if(data.length > maxFrames) {
+        maxFrames = data.length;
+      }
+
       layers.push({
         id: nanoid(),
         x: 0,
         y: 0,
         width: 800,
         height: 450,
-        clip: data,
+        clip: data.path,
+        fps: data.fps,
         opacity: 1,
         volume: 1,
         reference: React.createRef(),
@@ -139,7 +146,7 @@ export default class Home extends React.Component {
         locked: false
       });
 
-      this.setState({layers: layers});
+      this.setState({layers: layers, maxFrames: maxFrames});
 
       this.addSyncToLayers();
     })
@@ -155,7 +162,7 @@ export default class Home extends React.Component {
 
       this.setState({layers: layers});
     } catch (e) {
-      addSyncToLayers()
+      // addSyncToLayers()
     }
   }
 

@@ -14,6 +14,7 @@
     "array-move": "^2.2.0",
     "electron-serve": "^0.4.0",
     "electron-store": "^5.1.0",
+    "ffprobe-client": "^1.1.6",
     "jimp": "^0.16.0",
     "nanoid": "^3.1.12",
     "rc-slider": "^8.7.1",

@@ -1,6 +1,11 @@
 import { app, dialog, ipcMain } from 'electron';
 import serve from 'electron-serve';
 import { createWindow } from './helpers';
+import { join } from 'path';
+import { execFile } from 'child_process';
+
+process.env.FFPROBE_PATH = join(__dirname, '../bin/ffprobe.exe')
+const ffprobe = require('ffprobe-client')
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -40,7 +45,20 @@ if (isProd) {
         return;
       }
       if(result.filePaths.length > 0) {
-        event.sender.send('addLayer', result.filePaths[0]);
+        const path = result.filePaths[0];
+        ffprobe(path)
+          .then(data => {
+            console.log(data)
+            const videoStream = data.streams[0].codec_type == 'video' ? data.streams[0] : data.streams[1];
+            const videoData = {
+              path: path,
+              fps: parseInt(videoStream.r_frame_rate.split('/')[0]),
+              length: parseInt(videoStream.nb_frames)
+            }
+            event.sender.send('addLayer', videoData);
+          })
+          .catch(err => console.error(err))
+
       }
     }).catch(err => {
       console.log(err)

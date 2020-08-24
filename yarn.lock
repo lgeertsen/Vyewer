@@ -3135,6 +3135,11 @@ fd-slicer@~1.0.1:
   dependencies:
     pend "~1.2.0"
 
+ffprobe-client@^1.1.6:
+  version "1.1.6"
+  resolved "https://registry.yarnpkg.com/ffprobe-client/-/ffprobe-client-1.1.6.tgz#5fad0b148aa82bd8c855447de08a2bff02864e01"
+  integrity sha512-n+wNlD9QC0nHsBUJGYljYAB1gwtuNxXQh0V4Am6M2T3h8Is7qR2hwrrC5Pjc9YNE4MpIslaQUe7+c9wPCarVJQ==
+
 figgy-pudding@^3.5.1:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/figgy-pudding/-/figgy-pudding-3.5.1.tgz#862470112901c727a0e495a80744bd5baa1d6790"
